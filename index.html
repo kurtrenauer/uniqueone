@@ -9,7 +9,7 @@
     :root {
       --bg: #000;
       --fg: #fff;
-      --accent: #d9a466; /* warmer Honig-/Amber-Ton, inspiriert von geöltem Holz */
+      --accent: #efd9b5; /* warmes Elfenbein, dezenter Kontrast zum Wordmark */
     }
 
     * { box-sizing: border-box; }
@@ -153,7 +153,7 @@
 
       // Read the accent color once so CSS stays the single source of truth.
       const accent = getComputedStyle(document.documentElement)
-        .getPropertyValue('--accent').trim() || '#d9a466';
+        .getPropertyValue('--accent').trim() || '#efd9b5';
       function hexToRgb(h) {
         const m = h.replace('#', '');
         const v = m.length === 3
@@ -210,10 +210,10 @@
 
           // Glowing dot at the very tip
           const tip = trail[n - 1];
-          const glowR = 16;
+          const glowR = 8;
           const grad = ctx.createRadialGradient(tip.x, tip.y, 0, tip.x, tip.y, glowR);
-          grad.addColorStop(0, 'rgba(' + rgb + ',0.95)');
-          grad.addColorStop(0.35, 'rgba(' + rgb + ',0.35)');
+          grad.addColorStop(0, 'rgba(' + rgb + ',0.9)');
+          grad.addColorStop(0.4, 'rgba(' + rgb + ',0.3)');
           grad.addColorStop(1, 'rgba(' + rgb + ',0)');
           ctx.fillStyle = grad;
           ctx.beginPath();
@@ -222,7 +222,7 @@
 
           ctx.fillStyle = accent;
           ctx.beginPath();
-          ctx.arc(tip.x, tip.y, 3, 0, Math.PI * 2);
+          ctx.arc(tip.x, tip.y, 1.6, 0, Math.PI * 2);
           ctx.fill();
         }
 
