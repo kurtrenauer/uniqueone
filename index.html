@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UniqueOne – Handgefertigte Unikate aus österreichischem Holz</title>
+  <meta name="description" content="UniqueOne – Handgefertigte Unikate aus österreichischem Holz. Physisch. Digital. Limitiert." />
+  <style>
+    :root {
+      --bg: #000;
+      --fg: #fff;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    #line-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      display: block;
+    }
+
+    main {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100vh;
+      padding: 2rem;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    .wordmark {
+      width: min(70vw, 640px);
+      height: auto;
+      filter: invert(1);
+      margin-bottom: 2.5rem;
+      user-select: none;
+    }
+
+    .slogan {
+      font-weight: 300;
+      font-size: clamp(1rem, 2.2vw, 1.5rem);
+      letter-spacing: 0.08em;
+      line-height: 1.6;
+      max-width: 44ch;
+      margin: 0;
+      color: var(--fg);
+    }
+
+    .slogan .sep {
+      display: inline-block;
+      margin: 0 0.4em;
+      opacity: 0.55;
+    }
+
+    @media (max-width: 600px) {
+      .wordmark { margin-bottom: 1.75rem; }
+      .slogan { letter-spacing: 0.06em; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="line-canvas" aria-hidden="true"></canvas>
+
+  <main>
+    <img class="wordmark" src="uniqueone-wordmark-black.svg" alt="UniqueOne" />
+    <p class="slogan">
+      Handgefertigte Unikate aus österreichischem Holz.<br />
+      Physisch.<span class="sep">·</span>Digital.<span class="sep">·</span>Limitiert.
+    </p>
+  </main>
+
+  <script>
+    (function () {
+      const canvas = document.getElementById('line-canvas');
+      const ctx = canvas.getContext('2d');
+
+      let width = 0;
+      let height = 0;
+      let dpr = Math.max(1, window.devicePixelRatio || 1);
+
+      function resize() {
+        dpr = Math.max(1, window.devicePixelRatio || 1);
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = Math.floor(width * dpr);
+        canvas.height = Math.floor(height * dpr);
+        canvas.style.width = width + 'px';
+        canvas.style.height = height + 'px';
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        // initial paint to black so fade overlays look correct from the start
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, width, height);
+      }
+      resize();
+      window.addEventListener('resize', resize);
+
+      // Build a soft, meandering path across the screen using a few sine layers.
+      // t is phase in seconds; position loops seamlessly.
+      function pointAt(t) {
+        const loop = 14; // seconds per full traverse
+        const phase = (t % loop) / loop; // 0..1
+
+        // X moves left -> right across a slightly wider range than screen,
+        // so the tip glides in from off-screen and exits off-screen.
+        const xStart = -0.15 * width;
+        const xEnd = 1.15 * width;
+        const x = xStart + (xEnd - xStart) * phase;
+
+        // Y is a blend of sine waves for soft, organic curves.
+        const cx = height * 0.5;
+        const amp1 = height * 0.22;
+        const amp2 = height * 0.08;
+        const y =
+          cx +
+          Math.sin(phase * Math.PI * 2 * 1.0 + 0.4) * amp1 +
+          Math.sin(phase * Math.PI * 2 * 2.3 + 1.7) * amp2;
+
+        return { x, y };
+      }
+
+      // Trail is a ring buffer of recent tip positions.
+      const trail = [];
+      const maxTrail = 260; // number of samples kept; older ones are discarded
+      let lastTime = performance.now();
+      let simTime = 0;
+
+      function frame(now) {
+        const dt = Math.min(0.05, (now - lastTime) / 1000);
+        lastTime = now;
+        simTime += dt;
+
+        // Fade previous frame toward pure black. Low alpha keeps a soft tail,
+        // and because it's solid black, trailing segments eventually disappear
+        // completely (no permanent residue).
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.085)';
+        ctx.fillRect(0, 0, width, height);
+
+        // Sample several sub-steps per frame for a silky-smooth path even on
+        // slower devices.
+        const subSteps = 3;
+        for (let i = 0; i < subSteps; i++) {
+          const t = simTime - (subSteps - 1 - i) * (dt / subSteps);
+          trail.push(pointAt(t));
+        }
+        while (trail.length > maxTrail) trail.shift();
+
+        if (trail.length >= 2) {
+          // Draw the line as a series of short segments whose opacity and
+          // width taper toward the tail. Combined with the per-frame fade,
+          // this produces a head that is bright + defined and a tail that
+          // vanishes smoothly.
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+
+          const n = trail.length;
+          for (let i = 1; i < n; i++) {
+            const p0 = trail[i - 1];
+            const p1 = trail[i];
+            const k = i / (n - 1); // 0 at oldest, 1 at newest
+            const alpha = Math.pow(k, 1.8);
+            const lw = 0.6 + k * 2.2;
+            ctx.strokeStyle = 'rgba(255,255,255,' + alpha.toFixed(3) + ')';
+            ctx.lineWidth = lw;
+            ctx.beginPath();
+            ctx.moveTo(p0.x, p0.y);
+            ctx.lineTo(p1.x, p1.y);
+            ctx.stroke();
+          }
+
+          // Glowing dot at the very tip
+          const tip = trail[n - 1];
+          const glowR = 14;
+          const grad = ctx.createRadialGradient(tip.x, tip.y, 0, tip.x, tip.y, glowR);
+          grad.addColorStop(0, 'rgba(255,255,255,0.95)');
+          grad.addColorStop(0.35, 'rgba(255,255,255,0.35)');
+          grad.addColorStop(1, 'rgba(255,255,255,0)');
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.arc(tip.x, tip.y, glowR, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = '#fff';
+          ctx.beginPath();
+          ctx.arc(tip.x, tip.y, 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        requestAnimationFrame(frame);
+      }
+
+      requestAnimationFrame(function (t) {
+        lastTime = t;
+        frame(t);
+      });
+    })();
+  </script>
+</body>
+</html>
