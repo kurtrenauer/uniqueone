@@ -78,6 +78,25 @@
       .wordmark { margin-bottom: 1.75rem; }
       .slogan { letter-spacing: 0.06em; }
     }
+
+    .legal {
+      position: fixed;
+      right: 1.25rem;
+      bottom: 1rem;
+      z-index: 2;
+      font-size: 0.75rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      opacity: 0.55;
+      text-decoration: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .legal:hover,
+    .legal:focus-visible {
+      opacity: 1;
+    }
   </style>
 </head>
 <body>
@@ -90,6 +109,8 @@
       Physisch.<span class="sep">·</span>Digital.<span class="sep">·</span>Limitiert.
     </p>
   </main>
+
+  <a class="legal" href="impressum.html">Impressum</a>
 
   <script>
     (function () {
